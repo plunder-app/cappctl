@@ -35,4 +35,10 @@ Pass the Mac address and an IP address to the `cappctl` tool to bootstrap the fi
 
 `cappctl init-mgmt-cluster -a 192.168.1.2 -m 00:11:22:33:44:55`
 
+### Destroy a machine
+
+**Note** If the machine still exists in the plunder deployments, then it will have it's OS reprovisioned.
+
+`cappctl destroy -a <machine address>`
+
 ![](images/cluster-api-plunder.jpeg "Cluster API Plunder")

@@ -22,11 +22,19 @@ var managermentCluster struct {
 	address string
 }
 
+var machine struct {
+	address string
+}
+
 func init() {
-	initClusterCmd.Flags().StringVarP(&managermentCluster.mac, "mac", "m", "", "The Mac address of the node to use for provisioning")
-	initClusterCmd.Flags().StringVarP(&managermentCluster.address, "address", "a", "", "The IP address to provision the management cluster with")
 	cappctlCmd.PersistentFlags().IntVar(&logLevel, "logLevel", int(log.InfoLevel), "Set the logging level [0=panic, 3=warning, 5=debug]")
 
+	initClusterCmd.Flags().StringVarP(&managermentCluster.mac, "mac", "m", "", "The Mac address of the node to use for provisioning")
+	initClusterCmd.Flags().StringVarP(&managermentCluster.address, "address", "a", "", "The IP address to provision the management cluster with")
+
+	destroyMachine.Flags().StringVarP(&machine.address, "address", "a", "", "Address of a machine to destroy")
+
+	cappctlCmd.AddCommand(destroyMachine)
 	cappctlCmd.AddCommand(initClusterCmd)
 }
 
@@ -213,6 +221,52 @@ var initClusterCmd = &cobra.Command{
 				break
 			}
 		}
+
+		return
+	},
+}
+
+var destroyMachine = &cobra.Command{
+	Use:   "destroy",
+	Short: "Destroy a machine",
+	Run: func(cmd *cobra.Command, args []string) {
+		log.SetLevel(log.Level(logLevel))
+
+		fmt.Println("Destroying a node")
+
+		if machine.address == "" {
+			// Print a warning and exit
+			cmd.Help()
+			log.Fatalf("No address specified for host")
+
+		}
+
+		u, c, err := apiserver.BuildEnvironmentFromConfig("plunderclient.yaml", "")
+		if err != nil {
+			log.Fatalf("%s", err.Error())
+		}
+
+		destroyMap := destroyCommand(machine.address)
+
+		// Marshall the parlay submission (runs the uptime command)
+		b, err := json.Marshal(destroyMap)
+		if err != nil {
+			log.Fatalf("%s", err.Error())
+		}
+
+		u.Path = apiserver.ParlayAPIPath()
+		response, err := apiserver.ParsePlunderPost(u, c, b)
+		if err != nil {
+			log.Fatalf("%s", err.Error())
+		}
+
+		// If an error has been returned then handle the error gracefully and terminate
+		if response.FriendlyError != "" || response.Error != "" {
+			log.Debugln(response.Error)
+			log.Fatalln(response.FriendlyError)
+		}
+
+		fmt.Println("Node will reboot")
 
 		return
 	},
