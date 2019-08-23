@@ -25,7 +25,7 @@ This will install the `cappctl` tool in the `./bin` directory.
 
 The `plunder` client configuration will be needed in the current working directory, in order for the tooling to successfully communicate.
 
-### Find a server
+### Find a server
 
 `pldrctl get unleased` will return a list of servers that are currently unprovisioned
 
