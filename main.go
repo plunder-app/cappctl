@@ -149,11 +149,11 @@ var initClusterCmd = &cobra.Command{
 				log.Fatalf("%s", err.Error())
 			}
 
-			if logs.State != "Completed" {
-				fmt.Printf("\r\033[36mWaiting for Host to complete OS provisioning \033[m%.0f Seconds", time.Since(t).Seconds())
-			} else {
+			if logs.State == "Completed" {
 				fmt.Printf("\r\033[32mHost has been succesfully provisioned OS in\033[m %s Seconds\n", time.Since(t).Round(time.Second))
 				break
+			} else {
+				fmt.Printf("\r\033[36mWaiting for Host to complete OS provisioning \033[m%.0f Seconds", time.Since(t).Seconds())
 			}
 		}
 
@@ -212,16 +212,15 @@ var initClusterCmd = &cobra.Command{
 				log.Fatalf("%s", err.Error())
 			}
 
-			if logs.State != "Completed" {
-				fmt.Printf("\r\033[36mWaiting for Kubernetes to complete installation \033[m%.0f Seconds", time.Since(t).Seconds())
+			if logs.State == "Completed" {
+				fmt.Printf("\r\033[32mKubernetes has been succesfully installed on host %s in\033[m %s Seconds\n", managermentCluster.address, time.Since(t).Round(time.Second))
+				break
 			} else if logs.State == "Failed" {
 				log.Fatalln("Kubernetes has failed to install")
 			} else {
-				fmt.Printf("\r\033[32mKubernetes has been succesfully installed on host %s in\033[m %s Seconds\n", managermentCluster.address, time.Since(t).Round(time.Second))
-				break
+				fmt.Printf("\r\033[36mWaiting for Kubernetes to complete installation \033[m%.0f Seconds", time.Since(t).Seconds())
 			}
 		}
-
 		return
 	},
 }
