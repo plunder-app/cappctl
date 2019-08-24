@@ -17,6 +17,9 @@ import (
 
 var logLevel int
 
+// leaveDeploymentFlag - will stop the removal of the deployment once it's been destroyed
+var leaveDeploymentFlag bool
+
 var managermentCluster struct {
 	mac     string
 	address string
@@ -33,6 +36,7 @@ func init() {
 	initClusterCmd.Flags().StringVarP(&managermentCluster.address, "address", "a", "", "The IP address to provision the management cluster with")
 
 	destroyMachine.Flags().StringVarP(&machine.address, "address", "a", "", "Address of a machine to destroy")
+	destroyMachine.Flags().BoolVarP(&leaveDeploymentFlag, "leave", "l", false, "Leave the deployment after it's been destroyed")
 
 	cappctlCmd.AddCommand(destroyMachine)
 	cappctlCmd.AddCommand(initClusterCmd)
@@ -265,8 +269,22 @@ var destroyMachine = &cobra.Command{
 			log.Fatalln(response.FriendlyError)
 		}
 
-		fmt.Println("Node will reboot")
+		fmt.Println("Node will now reset (through sysrq)")
 
+		if !leaveDeploymentFlag {
+			fmt.Println("Removing node from configuration so it wont be re-provisioned")
+			u.Path = apiserver.DeploymentAPIPath() + "/address/" + strings.Replace(machine.address, ".", "-", -1)
+			response, err = apiserver.ParsePlunderDelete(u, c)
+			if err != nil {
+				log.Fatalf("%s", err.Error())
+			}
+
+			// If an error has been returned then handle the error gracefully and terminate
+			if response.FriendlyError != "" || response.Error != "" {
+				log.Debugln(response.Error)
+				log.Fatalln(response.FriendlyError)
+			}
+		}
 		return
 	},
 }
