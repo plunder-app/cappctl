@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -72,6 +73,40 @@ var initClusterCmd = &cobra.Command{
 			// Wait to give the user time to cancel with ctrl+c
 			time.Sleep(5 * time.Second)
 			// Get a mac address
+			u, c, err := apiserver.BuildEnvironmentFromConfig("plunderclient.yaml", "")
+			if err != nil {
+				log.Fatalf("%s", err.Error())
+			}
+
+			u.Path = path.Join(u.Path, apiserver.DHCPAPIPath()+"/unleased")
+
+			response, err := apiserver.ParsePlunderGet(u, c)
+			if err != nil {
+				log.Fatalf("%s", err.Error())
+			}
+			// If an error has been returned then handle the error gracefully and terminate
+			if response.FriendlyError != "" || response.Error != "" {
+				log.Fatalf("%s", err.Error())
+
+			}
+			var unleased []services.Lease
+
+			err = json.Unmarshal(response.Payload, &unleased)
+			if err != nil {
+				log.Fatalf("%s", err.Error())
+			}
+
+			// Iterate through all known addresses and find a free one that looks "recent"
+			for i := range unleased {
+				if time.Since(unleased[i].Expiry).Minutes() < 10 {
+					managermentCluster.mac = unleased[i].Nic
+				}
+			}
+
+			// Hopefully we found one!
+			if managermentCluster.mac == "" {
+				log.Fatalf("No free hardware could be found to provison")
+			}
 		}
 
 		u, c, err := apiserver.BuildEnvironmentFromConfig("plunderclient.yaml", "")
