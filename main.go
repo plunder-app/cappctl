@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -77,8 +78,13 @@ var initClusterCmd = &cobra.Command{
 			if err != nil {
 				log.Fatalf("%s", err.Error())
 			}
+			ep, resp := apiserver.FindFunctionEndpoint(u, c, "dhcp", http.MethodGet)
+			if resp.Error != "" {
+				log.Debug(resp.Error)
+				log.Fatalf(resp.FriendlyError)
+			}
 
-			u.Path = path.Join(u.Path, apiserver.DHCPAPIPath()+"/unleased")
+			u.Path = path.Join(u.Path, ep.Path+"/unleased")
 
 			response, err := apiserver.ParsePlunderGet(u, c)
 			if err != nil {
@@ -123,7 +129,14 @@ var initClusterCmd = &cobra.Command{
 			},
 		}
 
-		u.Path = apiserver.DeploymentAPIPath()
+		ep, resp := apiserver.FindFunctionEndpoint(u, c, "deployment", http.MethodPost)
+		if resp.Error != "" {
+			log.Debug(resp.Error)
+			log.Fatalf(resp.FriendlyError)
+		}
+
+		u.Path = ep.Path
+
 		b, err := json.Marshal(d)
 		if err != nil {
 			log.Fatalf("%s", err.Error())
@@ -154,7 +167,13 @@ var initClusterCmd = &cobra.Command{
 
 		for {
 			// Set Parlay API path and POST
-			u.Path = apiserver.ParlayAPIPath()
+			ep, resp = apiserver.FindFunctionEndpoint(u, c, "parlay", http.MethodPost)
+			if resp.Error != "" {
+				log.Debug(resp.Error)
+				log.Fatalf(resp.FriendlyError)
+			}
+			u.Path = ep.Path
+
 			response, err := apiserver.ParsePlunderPost(u, c, b)
 			if err != nil {
 				log.Fatalf("%s", err.Error())
@@ -170,7 +189,13 @@ var initClusterCmd = &cobra.Command{
 			time.Sleep(5 * time.Second)
 
 			// Set the parlay API get logs path and GET
-			u.Path = apiserver.ParlayAPIPath() + "/logs/" + dashAddress
+			ep, resp = apiserver.FindFunctionEndpoint(u, c, "parlayLog", http.MethodGet)
+			if resp.Error != "" {
+				log.Debug(resp.Error)
+				log.Fatalf(resp.FriendlyError)
+			}
+			u.Path = ep.Path + "/" + dashAddress
+
 			response, err = apiserver.ParsePlunderGet(u, c)
 			if err != nil {
 				log.Fatalf("%s", err.Error())
@@ -213,7 +238,13 @@ var initClusterCmd = &cobra.Command{
 			log.Fatalf("%s", err.Error())
 		}
 		// Set Parlay API path and POST
-		u.Path = apiserver.ParlayAPIPath()
+		ep, resp = apiserver.FindFunctionEndpoint(u, c, "parlay", http.MethodPost)
+		if resp.Error != "" {
+			log.Debug(resp.Error)
+			log.Fatalf(resp.FriendlyError)
+		}
+		u.Path = ep.Path
+
 		response, err = apiserver.ParsePlunderPost(u, c, b)
 		if err != nil {
 			log.Fatalf("%s", err.Error())
@@ -233,7 +264,13 @@ var initClusterCmd = &cobra.Command{
 			time.Sleep(5 * time.Second)
 
 			// Set the parlay API get logs path and GET
-			u.Path = apiserver.ParlayAPIPath() + "/logs/" + dashAddress
+			ep, resp = apiserver.FindFunctionEndpoint(u, c, "parlayLog", http.MethodGet)
+			if resp.Error != "" {
+				log.Debug(resp.Error)
+				log.Fatalf(resp.FriendlyError)
+			}
+			u.Path = ep.Path + "/" + dashAddress
+
 			response, err = apiserver.ParsePlunderGet(u, c)
 			if err != nil {
 				log.Fatalf("%s", err.Error())
@@ -292,7 +329,13 @@ var destroyMachine = &cobra.Command{
 			log.Fatalf("%s", err.Error())
 		}
 
-		u.Path = apiserver.ParlayAPIPath()
+		// Set Parlay API path and POST
+		ep, resp := apiserver.FindFunctionEndpoint(u, c, "parlay", http.MethodPost)
+		if resp.Error != "" {
+			log.Debug(resp.Error)
+			log.Fatalf(resp.FriendlyError)
+		}
+		u.Path = ep.Path
 		response, err := apiserver.ParsePlunderPost(u, c, b)
 		if err != nil {
 			log.Fatalf("%s", err.Error())
@@ -308,7 +351,13 @@ var destroyMachine = &cobra.Command{
 
 		if !leaveDeploymentFlag {
 			fmt.Println("Removing node from configuration so it wont be re-provisioned")
-			u.Path = apiserver.DeploymentAPIPath() + "/address/" + strings.Replace(machine.address, ".", "-", -1)
+			// Set Parlay API path and POST
+			ep, resp := apiserver.FindFunctionEndpoint(u, c, "deploymentAddress", http.MethodDelete)
+			if resp.Error != "" {
+				log.Debug(resp.Error)
+				log.Fatalf(resp.FriendlyError)
+			}
+			u.Path = ep.Path + "/" + strings.Replace(machine.address, ".", "-", -1)
 			response, err = apiserver.ParsePlunderDelete(u, c)
 			if err != nil {
 				log.Fatalf("%s", err.Error())
